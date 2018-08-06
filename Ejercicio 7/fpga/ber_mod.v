@@ -62,7 +62,8 @@ module ber_mod(
       //fase de adaptacion, para contar errores deberia estar la flag,el rx habilitado y valid en 1 segun yo  
       else if (enable_value && i_valid && adapt_flag) begin
             
-            if( system_delay == MAX_DELAY -1 ) begin//termino fase de adaptacion(511*511 pasadas), == (MAX_DELAY - 1)????
+            if( system_delay == MAX_DELAY -1 ) begin//termino fase de adaptacion(511*511 pasadas), == (MAX_DELAY - 1)???? 
+                                                    //PUSE MAX_DELAY - 1 PORQUE CREO QUE VA DESDE 0 A 510
                                                 //va a andar para el caso que system_delay deba ser 511?? -> revisar
                 //revisar que registros setear aca !!!!!!!!!!
                 adapt_flag <= 1'b0;
@@ -89,7 +90,7 @@ module ber_mod(
                 counter <= {COUNT_LEN{1'b0}}; 
                 system_delay <= system_delay + 1;
                 adapt_flag <= adapt_flag; // ES NECESARIO ????? 8====3 :::: CREO QUE NO GUACHO
-                
+                buffer <= {i_bit_gen, buffer[1 : PRBS_LEN -1]};             //ACTUALIZO BUFFER, HAY QUE ACTUALIZARLO EN ALGUN OTRO LADO? 
             end
             
             else begin //cuento errores
@@ -97,11 +98,9 @@ module ber_mod(
                 counter <= counter + 1;
                 if( buffer[PRBS_LEN - 1 - system_delay] ^ i_detection) begin//si el detectado y enviado son distintos
                     ber_counter <= ber_counter + 1;
-		    buffer[0] <= i_bit_gen;
 		end
                 else begin
-                    ber_counter <= ber_counter;
-		    buffer[0] <= i_bit_gen;
+                    ber_counter <= ber_counter;                          
                 end
             end
          
