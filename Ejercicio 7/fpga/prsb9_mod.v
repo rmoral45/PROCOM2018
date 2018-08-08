@@ -1,7 +1,8 @@
-`define seed 0xAA1
+`define seed 0x1AA
 
 module prbs9_mod(
                  enable,
+                 i_valid,
                  clk,
                  rst,
                  bit_out
@@ -15,11 +16,12 @@ module prbs9_mod(
    input enable;
    input clk;
    input rst;
+   input i_valid;
    
 
    // Vars
    
-   wire bit_gen  ;
+   
    reg [8 : 0] state  ;
    wire reset ;
 
@@ -30,7 +32,7 @@ module prbs9_mod(
       if(reset) begin
          state<= SEED;
       end
-      else if(enable) begin
+      else if(enable && i_valid) begin
         state<={state[7:0],(state[8]^state[4])};
       end
       else 

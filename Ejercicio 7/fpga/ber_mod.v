@@ -1,4 +1,4 @@
-`define PRBS_LEN 511
+`define PRBS_LEN 10
 
 module ber_mod(
                  i_enable,
@@ -7,11 +7,12 @@ module ber_mod(
                  i_valid,
                  i_bit_gen,
                  i_detection,
-                 i_phase
+                 i_phase,
+                 o_led
                  );//falta agregar puerto de salida para encender led
       
    localparam PRBS_LEN = `PRBS_LEN;
-   localparam MAX_DELAY = `PRBS_LEN; // prbs_len -1 ???
+   localparam MAX_DELAY = `PRBS_LEN + 1; // sumo 1 para incluir un delay de 511
    localparam COUNT_LEN = $clog2(`PRBS_LEN);//bits que necesita el contador
 
    // Ports
@@ -23,12 +24,14 @@ module ber_mod(
    input i_bit_gen; //entrada que viene del prbs
    input i_detection; //entrada que viene del rx
    input [1:0] i_phase;
+   output      o_led;
    
 
    // Vars
    
    wire                         reset ;
    wire                         reset_condition;
+   wire                         ber0;
    reg  [1:0]                   phase_value;//registro el valor de phase para detectar cambios
    reg                          enable_value;//registro el valor de enable para detectar encendido
    reg  [PRBS_LEN -1 :  0]      buffer; //buffer para almacenar la secuencia de bits recibida(i_bit_gen)
@@ -40,10 +43,9 @@ module ber_mod(
    reg                          adapt_flag;
 
    assign reset     =  ~rst;
-   assign reset_condition = ( (enable_value ^ i_enable) | (phase_value ^ i_phase) ) ;
+   assign reset_condition = ( ( (enable_value==1'b0) & (i_enable==1'b1) ) | (phase_value ^ i_phase) ) ;
+   assign ber0 = (min_ber == 0) ? 1'b1 : 1'b0; 
    
-   //agregar reset_condition a la lista de sensibilidad para reset asincrono cuando cambio de fase o prendo?
-   //de hacerlo asi deberia ser tambien en el rx,pero creo que no tiene sentido
    
    always@(posedge clk or posedge reset) begin
       
@@ -54,6 +56,7 @@ module ber_mod(
         buffer <= {PRBS_LEN{1'b0}};//ESTO SOLO SE INICIALIZA EN EL RESET !!!!!!
         system_delay <= {COUNT_LEN{1'b0}};
         min_delay <= {COUNT_LEN{1'b0}};
+        min_ber <= {COUNT_LEN{1'b1}};
         ber_counter <= {COUNT_LEN{1'b0}};
         adapt_flag <= 1'b1;   
         counter <= {COUNT_LEN{1'b0}};      
@@ -61,17 +64,18 @@ module ber_mod(
       end
       //fase de adaptacion, para contar errores deberia estar la flag,el rx habilitado y valid en 1 segun yo  
       else if (enable_value && i_valid && adapt_flag) begin
-            
-            if( system_delay == MAX_DELAY -1 ) begin//termino fase de adaptacion(511*511 pasadas), == (MAX_DELAY - 1)???? 
-                                                    //PUSE MAX_DELAY - 1 PORQUE CREO QUE VA DESDE 0 A 510
+            phase_value <= phase_value;
+            buffer <= {buffer[PRBS_LEN - 2 : 0],i_bit_gen};//left shift
+            counter <= counter + 1'b1;
+            if( system_delay == MAX_DELAY) begin//termino fase de adaptacion(511*511 pasadas), == (MAX_DELAY - 1)????
                                                 //va a andar para el caso que system_delay deba ser 511?? -> revisar
                 //revisar que registros setear aca !!!!!!!!!!
                 adapt_flag <= 1'b0;
-                ber_counter <= 1'b0;
+                ber_counter <= {COUNT_LEN{1'b0}};
                 
             end
             
-            else if (counter == PRBS_LEN ) begin //veo si el ber p este delay es menor que para el delay anterior(c/511)
+            else if (counter == PRBS_LEN) begin //veo si es ber p este delay es menor que para el delay anterior(c/511)
                 
                 if(ber_counter < min_ber)begin
                     
@@ -81,7 +85,7 @@ module ber_mod(
                 end
                 else begin
                     
-                    min_ber <= min_ber;
+                    min_ber <=min_ber;
                     min_delay <= min_delay;
                     
                 end
@@ -89,19 +93,18 @@ module ber_mod(
                 ber_counter <= {COUNT_LEN{1'b0}};
                 counter <= {COUNT_LEN{1'b0}}; 
                 system_delay <= system_delay + 1;
-                adapt_flag <= adapt_flag; // ES NECESARIO ????? 8====3 :::: CREO QUE NO GUACHO
-                buffer <= {i_bit_gen, buffer[1 : PRBS_LEN -1]};             //ACTUALIZO BUFFER, HAY QUE ACTUALIZARLO EN ALGUN OTRO LADO? 
+                adapt_flag <= adapt_flag; // ES NECESARIO ????? 8====3
+                
             end
             
             else begin //cuento errores
-               
-                counter <= counter + 1;
-                if( buffer[PRBS_LEN - 1 - system_delay] ^ i_detection) begin//si el detectado y enviado son distintos
-                    ber_counter <= ber_counter + 1;
-		end
-                else begin
-                    ber_counter <= ber_counter;                          
-                end
+              // buffer <= {buffer[PRBS_LEN - 2 : 0],i_bit_gen};//left shift
+               //counter <= counter + 1;
+                 if( buffer[system_delay] ^ i_detection)//si el detectado y enviado son distintos
+                     ber_counter <= ber_counter + 1;
+                 else
+                     ber_counter <= ber_counter;    
+                    
             end
          
       end
@@ -116,6 +119,7 @@ module ber_mod(
          ber_counter <= ber_counter;
          adapt_flag <= adapt_flag;   
          counter <= counter;
+         phase_value <= phase_value;
          
        end  
       

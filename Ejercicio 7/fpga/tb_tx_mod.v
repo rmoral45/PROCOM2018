@@ -13,15 +13,12 @@ module tb_tx_mod();
    reg                 CLK100MHZ;
    wire                bit_out;
 
-
-   //localparam COEF = {8'd0,8'd1,8'd2,8'd3,8'd4,8'd5,8'd6,8'd7,8'd8,8'd9,8'd10,8'd11,
-   //                    8'd12,8'd13,8'd14,8'd15,8'd16,8'd17,8'd18,8'd19,8'd20,8'd21,8'd22,8'd23};
-
    initial begin
   
       CLK100MHZ    = 1'b0  ;
-      ck_rst       = 1'b0  ;
+      ck_rst       = 1'b1  ;
       enable   = 1'b0  ;
+      #10 ck_rst  = 1'b0  ;
       #10 ck_rst  = 1'b1  ;
       #20 enable = 1'b1;
       #1000000 $finish;
