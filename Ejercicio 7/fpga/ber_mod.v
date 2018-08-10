@@ -45,7 +45,7 @@ module ber_mod(
    assign reset     =  ~rst;
    assign reset_condition = ( ( (enable_value==1'b0) & (i_enable==1'b1) ) | (phase_value ^ i_phase) ) ;
    assign ber0 = (min_ber == 0) ? 1'b1 : 1'b0; 
-   
+   assign o_led = ber0;
    
    always@(posedge clk or posedge reset) begin
       
@@ -122,7 +122,6 @@ module ber_mod(
          phase_value <= phase_value;
          
        end  
-      
    end
 
 

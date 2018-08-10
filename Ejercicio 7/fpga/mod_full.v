@@ -1,6 +1,6 @@
 `timescale 1ns/100ps
 
-module tb_full(
+module mod_full(
                 rst,
                 CLK100MHZ,
                 i_sw,

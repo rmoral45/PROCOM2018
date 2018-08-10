@@ -1,6 +1,6 @@
 `timescale 1ns/100ps
 
-module tb_full();
+module tb_mod_full();
     
     wire    [11:0]      tx_out;
     wire                bit_gen;
